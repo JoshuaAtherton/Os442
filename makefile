@@ -1,2 +1,2 @@
-main: main.c
-	gcc -o main main.c
+mash: mash.c
+	gcc -o mash mash.c
