@@ -8,8 +8,8 @@ Armoni Atherton
 
 int main() {
 
-    printf("hi");
-    printf("bye");
+    printf("hi\n");
+    printf("bye\n");
     
     return 0;
 }
