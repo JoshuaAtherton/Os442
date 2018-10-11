@@ -9,6 +9,7 @@ Armoni Atherton
 int main() {
 
     printf("hi");
+    printf("bye");
     
     return 0;
 }
