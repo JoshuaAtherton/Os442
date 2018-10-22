@@ -27,7 +27,7 @@ fscanf(stdin, "%s", arg1);
 printf("mash-3->");
 fscanf(stdin, "%s", arg2);
 
-// This will get file;
+// This will get file
 printf("file->");
 fscanf(stdin, "%s", file);
 
