@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #include<stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,4 +46,20 @@ int status = execvp(args[0], args);
 printf("STATUS CODE=%d\n",status);
 
 return 0;
+=======
+/*
+TCSS 442 Assignment 1
+Joshua Atherton
+Armoni Atherton
+*/
+
+#include <stdio.h>
+
+int main() {
+
+    printf("hi\n");
+    printf("bye\n");
+    
+    return 0;
+>>>>>>> 1d0ea11cbbcd9db9a11b961250d2b4e6e9e9b6e5
 }
