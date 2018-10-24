@@ -81,37 +81,6 @@ void parse(char ***data, char *cmd) {
     *(data + 5) = 0;
 }
 
-//IF WE GET IN TROUBLE CODE
-
-// This will get command 1;
-//printf("mash-1->");
-//fscanf(stdin, "%s", cmd1);
-//fgets(cmd1, 100, stdin);
-
-// // This will get command 2;
-// printf("mash-2->");
-// fscanf(stdin, "%s", cmd2);
-
-// // This will get command 3;
-// printf("mash-3->");
-// fscanf(stdin, "%s", cmd3);
-
-// // This will get file
-// printf("file->");
-// fscanf(stdin, "%s", file);
-
-// char ** args = malloc(sizeof(char *) * ARGCNT);
-
-// char * str = strtok(cmd1, " ");
-
-// int cnt = 0;
-// while (str != NULL && cnt < ARGCNT) {
-//     //printf("%s\n", str);
-//     *(args + cnt) = str;
-//     str = strtok(NULL, " ");
-//     cnt++;
-// }
-
 // char ** args = malloc(sizeof(char *) * ARGCNT);
 // *(args + 0) = cmd1;
 // *(args + 1) = cmd2;
