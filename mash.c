@@ -9,10 +9,13 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+// todo: remove unused imports
+
 #define MAXSTR 255
 #define ARGCNT 6
 
 void parse(char ***data, char *cmd); 
+void run_commands(char ** cmd1, char ** cmd2, char ** cmd3);
 
 /*
  * Driver for program. 
@@ -49,27 +52,33 @@ int main(int argc, char *argv[]) {
     char ** args3;
     parse(&args3, cmd3);
 
-    //THIS IS FOR OUTPUTING ONLY
-    // for (int i=0;i<ARGCNT;i++)
-    //     printf("i=%d args1[i]=%s\n",i,*(args1 + i));
-    // printf("\n");
+    run_commands(args1, args2, args3);
 
-    // for (int i=0;i<ARGCNT;i++)
-    //     printf("i=%d args2[i]=%s\n",i,*(args2 + i));
-    // printf("\n");
+/* * * * * * * * * * * * * * * * * * * * * * * * * * 
+    THIS IS FOR OUTPUTING ONLY
+    for (int i=0;i<ARGCNT;i++)
+        printf("i=%d args1[i]=%s\n",i,*(args1 + i));
+    printf("\n");
 
-    // for (int i=0;i<ARGCNT;i++)
-    //     printf("i=%d args3[i]=%s\n",i,*(args3 + i));
-    // printf("\n");
+    for (int i=0;i<ARGCNT;i++)
+        printf("i=%d args2[i]=%s\n",i,*(args2 + i));
+    printf("\n");
 
+    for (int i=0;i<ARGCNT;i++)
+        printf("i=%d args3[i]=%s\n",i,*(args3 + i));
+    printf("\n");
+ * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-
-    int status = execvp(args1[0], args1);
-    printf("CMD1:[SHELL 1] STATUS CODE=%d\n", status);
+    //todo: remove as this in in run_commands function
+    // int status = execvp(args1[0], args1);
+    // printf("CMD1:[SHELL 1] STATUS CODE=%d\n", status);
 
     return 0;
 }
 
+/*
+ * Will parse the terminal inputed comands into char arrays.
+ */
 void parse(char ***data, char *cmd) {
 
      *data = (char**) malloc(sizeof(char*) * ARGCNT);
@@ -88,6 +97,55 @@ void parse(char ***data, char *cmd) {
     *(data + 5) = 0;
 }
 
+/*
+ * Run three commands entered in parallel. 
+ */
+void run_commands(char ** cmd1, char ** cmd2, char ** cmd3) {
+       
+    printf("Starting forks pid(%d)\n", getpid());
+    int status;
+    pid_t p1, p2, p3;
+
+    p1 = fork(); // parent starts fork 1
+    if (p1 == 0) { 
+        // do child 1 stuff
+        printf("--start p1 forks pid(%d)\n", getpid());
+        
+    } else if (p1 > 0) {
+        // parent starts fork 2
+        p2 = fork();
+        if (p2 == 0) {
+            // do child 2 stuff
+            printf("--start p2 forks pid(%d)\n", getpid());
+        
+        } else if (p2 > 0) {
+            // parent starts fork 3
+            p3 = fork();
+            if (p3 == 0) {
+                // do child 3 stuff
+                printf("--start p3 forks pid(%d)\n", getpid());
+
+            } else if (p3 > 0) {
+                // parent made three threads with fork
+                // wait for children to finish
+                waitpid(p1, &status, 0);
+                waitpid(p2, &status, 0);
+                waitpid(p3, &status, 0);
+                printf("Children finished: p1(%d) p2(%d) p3(%d)\n", p1, p2, p3);
+            }
+        }
+    }
+    
+    printf("Ending pid(%d)\n", getpid());
+
+    // int status = execvp(args1[0], args1);
+    // printf("CMD1:[SHELL 1] STATUS CODE=%d\n", status);
+}
+
+
+
+
+// todo: remove
 // char ** args = malloc(sizeof(char *) * ARGCNT);
 // *(args + 0) = cmd1;
 // *(args + 1) = cmd2;
