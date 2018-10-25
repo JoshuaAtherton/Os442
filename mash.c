@@ -60,14 +60,17 @@ int main(int argc, char *argv[]) {
     //run the commands on three different threads
     run_commands(file, args1, args2, args3);
 
-    // todo: remove as this is in run_commands function
-    // int status = execvp(args1[0], args1);
-    // printf("CMD1:[SHELL 1] STATUS CODE=%d\n", status);
+    /**** example of execvp *****/ //remove at the end!
+    // char * myargs[3];
+    // myargs[0] = strdup("wc");
+    // myargs[1] = strdup("t.t");
+    // myargs[2] = NULL;
+    // execvp(myargs[0], myargs);
 
-    // remove all tempory files used to store data
-    // remove(FILE_NAME1);
-    // remove(FILE_NAME2);
-    // remove(FILE_NAME3);
+    /***** remove all tempory files used to store data ******/
+    remove(FILE_NAME1);
+    remove(FILE_NAME2);
+    remove(FILE_NAME3);
 
     return 0;
 }
@@ -79,14 +82,23 @@ void parse(char ***data, char *cmd, char *filename) {
 
     *data = (char**) malloc(sizeof(char*) * ARGCNT);
 
-    char * str = strtok(cmd, " ");
+    char* str = strtok(cmd, " ");
     int cnt = 0;
     while (str != NULL && cnt < ARGCNT) {
+        // remove newline char if found in string
+        for (int i = 0; *(str + i) != NULL; i++) 
+            if (*(str + i) == '\n')
+                *(str + i) = 0;
+
         *(*data + cnt) = str;
-        str = strtok(NULL, " \n");
+        str = strtok(NULL, " ");
         cnt++;
     }
-    // add filename to end and null value
+    // add filename to end and null terminate it
+    for (int i = 0; *(filename + i) != NULL; i++) 
+            if (*(filename+ i) == '\n')
+                *(filename + i) = 0;
+
     *(*data + cnt) = filename;
     *(*data + (cnt + 1)) = 0;
 }
@@ -179,7 +191,7 @@ void execute_command(char** cmd, char* filename, int file_num) {
     new_file_handler = open(filename, O_CREAT|O_WRONLY|O_TRUNC, S_IRWXU);
 
     /*** todo: format the command and output to file with 80 char spacing ****/
-    printf("----- CMD %d: ", file_num);
+    printf("----- CMD %d: ", file_num); // 12 char long
     int count = 0, cmd_length = 0;
     while (*(cmd + count) != NULL) {
         cmd_length += strlen(*(cmd + count));
@@ -188,12 +200,12 @@ void execute_command(char** cmd, char* filename, int file_num) {
     }
 
     /*** to print trailing dashes ******/
-    // for (int i = 0; i < 20 - (cmd_length - 3); i++) {
-    //     printf("-");
-    // }
-    // printf("\n");
+    for (int i = 0; i < 68 - cmd_length; i++) {
+        printf("-");
+    }
+    printf("\n");
     
-    // printf("\ncommand len: %d \n", cmd_length);
+    // printf("\ncommand len: %d \n", cmd_length); //todo: remove
     // todo: why is this not outputting to file?
     if (execvp(cmd[0], cmd) == -1) {
         printf("[SHELL %d] STATUS CODE=-1\n", file_num);
@@ -214,3 +226,13 @@ void print_command_results(char * filename) {
 
     fclose(temp_file);
 }
+
+
+/**************
+ * Todo:
+ *  -remove the file from comand input
+ *  -get thread timming working
+ *  -three crashes with bad input?
+ * 
+ * 
+ * ************/
