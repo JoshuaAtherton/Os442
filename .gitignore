@@ -1,6 +1,7 @@
 #ignore files with class extention
 *.class
 mash
-file1
-file2
-file3
+rfile1.txt
+rfile2.txt
+rfile3.txt
+
