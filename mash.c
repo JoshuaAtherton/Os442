@@ -23,7 +23,7 @@
 
 void parse(char ***data, char *cmd, char *filename); 
 void run_commands(char * file, char ** cmd1, char ** cmd2, char ** cmd3);
-void execute_command(char** cmd, char* filename);
+void execute_command(char** cmd, char* filename, int file_num);
 void print_command_results(char * filename);
 /*
  * Driver takes in three commands and a file to perform those commands on.
@@ -83,18 +83,18 @@ void parse(char ***data, char *cmd, char *filename) {
     int cnt = 0;
     while (str != NULL && cnt < ARGCNT) {
         *(*data + cnt) = str;
-        str = strtok(NULL, " ");
+        str = strtok(NULL, " \n");
         cnt++;
     }
     // add filename to end and null value
-    *(data + cnt) = &filename;
-    *(data + (cnt + 1)) = 0;
+    *(*data + cnt) = filename;
+    *(*data + (cnt + 1)) = 0;
 }
 
 /*
  * Run three commands entered in parallel. 
  */
-void run_commands(char * file, char ** cmd1, char ** cmd2, char ** cmd3) {
+void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3) {
        
     // printf("Starting forks pid(%d)\n", getpid());
     int status;
@@ -108,7 +108,7 @@ void run_commands(char * file, char ** cmd1, char ** cmd2, char ** cmd3) {
         // do child 1 stuff
         // printf("--start p1 forks pid(%d)\n", getpid());
         p1_start = clock();
-        execute_command(cmd1, FILE_NAME1);
+        execute_command(cmd1, FILE_NAME1, 1);
         
     } else if (p1 > 0) {
         // parent starts fork 2
@@ -117,7 +117,7 @@ void run_commands(char * file, char ** cmd1, char ** cmd2, char ** cmd3) {
             // do child 2 stuff
             // printf("--start p2 forks pid(%d)\n", getpid());
             p2_start = clock();
-            execute_command(cmd1, FILE_NAME2);
+            execute_command(cmd2, FILE_NAME2, 2);
         
         } else if (p2 > 0) {
             // parent starts fork 3
@@ -126,7 +126,7 @@ void run_commands(char * file, char ** cmd1, char ** cmd2, char ** cmd3) {
                 // do child 3 stuff
                 // printf("--start p3 forks pid(%d)\n", getpid());
                 p3_start = clock();
-                execute_command(cmd1, FILE_NAME3);
+                execute_command(cmd3, FILE_NAME3, 3);
 
             } else if (p3 > 0) {
                 // parent made three threads with fork
@@ -172,15 +172,29 @@ void run_commands(char * file, char ** cmd1, char ** cmd2, char ** cmd3) {
 /*
  * Execute a single command and write out to a file.
  */
-void execute_command(char** cmd, char* filename) {
+void execute_command(char** cmd, char* filename, int file_num) {
 
     int new_file_handler;
     close(STDOUT_FILENO);
     new_file_handler = open(filename, O_CREAT|O_WRONLY|O_TRUNC, S_IRWXU);
-    // fopen(filename, "w");
+    // fopen(filename, "w"); // above in his example
 
     // todo: format the command and output to file with 80 char spacing
-    printf("in file %s\n", filename);
+    printf("in file %s\n", filename); // do not print the file name
+    printf("----- CMD %d: ", file_num);
+    int count = 0, cmd_length = 0;
+    while (*(cmd + count) != NULL) {
+        cmd_length += strlen(*(cmd + count));
+        printf("%s ", *(cmd + count) );
+        count++;
+    }
+
+    printf("\ncommand len: %d \n", cmd_length);
+    //to print trailing dashes
+    for (int i = 0; i < 69 - (cmd_length - 3); i++) {
+        printf("-");
+    }
+    printf("\n");
     
     // todo: why is this not outputting to file?
     execvp(cmd[0], cmd); 
@@ -192,9 +206,8 @@ void execute_command(char** cmd, char* filename) {
  */
 void print_command_results(char * filename) {
     // todo: get the file results and output
-
     FILE * temp_file = fopen(filename, "r");
-    printf("-----file results here -----\n");
+    // printf("-----file results here -----\n");
     char line[MAXSTR];
     while ( fgets(line, MAXSTR, temp_file) != NULL) {
         printf("%s", line);
