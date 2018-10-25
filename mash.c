@@ -177,10 +177,8 @@ void execute_command(char** cmd, char* filename, int file_num) {
     int new_file_handler;
     close(STDOUT_FILENO);
     new_file_handler = open(filename, O_CREAT|O_WRONLY|O_TRUNC, S_IRWXU);
-    // fopen(filename, "w"); // above in his example
 
-    // todo: format the command and output to file with 80 char spacing
-    printf("in file %s\n", filename); // do not print the file name
+    /*** todo: format the command and output to file with 80 char spacing ****/
     printf("----- CMD %d: ", file_num);
     int count = 0, cmd_length = 0;
     while (*(cmd + count) != NULL) {
@@ -189,16 +187,17 @@ void execute_command(char** cmd, char* filename, int file_num) {
         count++;
     }
 
-    printf("\ncommand len: %d \n", cmd_length);
-    //to print trailing dashes
-    for (int i = 0; i < 69 - (cmd_length - 3); i++) {
-        printf("-");
-    }
-    printf("\n");
+    /*** to print trailing dashes ******/
+    // for (int i = 0; i < 20 - (cmd_length - 3); i++) {
+    //     printf("-");
+    // }
+    // printf("\n");
     
+    // printf("\ncommand len: %d \n", cmd_length);
     // todo: why is this not outputting to file?
-    execvp(cmd[0], cmd); 
-    //stuff doesnt execute after here
+    if (execvp(cmd[0], cmd) == -1) {
+        printf("[SHELL %d] STATUS CODE=-1\n", file_num);
+    } 
 }
 
 /*
