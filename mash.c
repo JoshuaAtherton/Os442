@@ -21,10 +21,17 @@
 #define FILE_NAME2 "rfile2.txt"
 #define FILE_NAME3 "rfile3.txt"
 
+typedef struct Times {
+    clock_t parent_start, p1_start, p2_start, p3_start;
+    clock_t parent_end, p1_end, p2_end, p3_end;
+} Times;
+
 void parse(char ***data, char *cmd, char *filename); 
-void run_commands(char * file, char ** cmd1, char ** cmd2, char ** cmd3);
+void run_commands(char * file, char ** cmd1, char ** cmd2, char ** cmd3,
+                Times *times);
 void execute_command(char** cmd, char* filename, int file_num);
 void print_command_results(char * filename);
+
 /*
  * Driver takes in three commands and a file to perform those commands on.
  * Program runs the commands in a parallel fashion. 
@@ -57,8 +64,9 @@ int main(int argc, char *argv[]) {
     char ** args3;
     parse(&args3, cmd3, file);
 
+    struct Times times; 
     //run the commands on three different threads
-    run_commands(file, args1, args2, args3);
+    run_commands(file, args1, args2, args3, &times);
 
     /**** example of execvp *****/ //remove at the end!
     // char * myargs[3];
@@ -86,7 +94,7 @@ void parse(char ***data, char *cmd, char *filename) {
     int cnt = 0;
     while (str != NULL && cnt < ARGCNT) {
         // remove newline char if found in string
-        for (int i = 0; *(str + i) != NULL; i++) 
+        for (int i = 0; *(str + i) != 0; i++) 
             if (*(str + i) == '\n')
                 *(str + i) = 0;
 
@@ -95,7 +103,7 @@ void parse(char ***data, char *cmd, char *filename) {
         cnt++;
     }
     // add filename to end and null terminate it
-    for (int i = 0; *(filename + i) != NULL; i++) 
+    for (int i = 0; *(filename + i) != 0; i++) 
             if (*(filename+ i) == '\n')
                 *(filename + i) = 0;
 
@@ -106,20 +114,17 @@ void parse(char ***data, char *cmd, char *filename) {
 /*
  * Run three commands entered in parallel. 
  */
-void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3) {
+void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, 
+                Times *times) {
        
-    // printf("Starting forks pid(%d)\n", getpid());
     int status;
     pid_t p1, p2, p3;
-    clock_t parent_start, p1_start, p2_start, p3_start;
-    clock_t parent_end, p1_end, p2_end, p3_end;
-
-    parent_start = clock();
+    times->parent_start = clock();
     p1 = fork(); // parent starts fork 1
     if (p1 == 0) { 
         // do child 1 stuff
         // printf("--start p1 forks pid(%d)\n", getpid());
-        p1_start = clock();
+        times->p1_start = clock();
         execute_command(cmd1, FILE_NAME1, 1);
         
     } else if (p1 > 0) {
@@ -128,7 +133,7 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3) {
         if (p2 == 0) {
             // do child 2 stuff
             // printf("--start p2 forks pid(%d)\n", getpid());
-            p2_start = clock();
+            times->p2_start = clock();
             execute_command(cmd2, FILE_NAME2, 2);
         
         } else if (p2 > 0) {
@@ -137,7 +142,7 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3) {
             if (p3 == 0) {
                 // do child 3 stuff
                 // printf("--start p3 forks pid(%d)\n", getpid());
-                p3_start = clock();
+                times->p3_start = clock();
                 execute_command(cmd3, FILE_NAME3, 3);
 
             } else if (p3 > 0) {
@@ -145,40 +150,39 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3) {
                 // wait for children to finish
                 waitpid(p1, &status, 0);
                 printf("First process finished...\n");
-                p1_end = clock();
+                times->p1_end = clock();
 
                 waitpid(p2, &status, 0);
                 printf("Second process finished...\n");
-                p2_end = clock();
+                times->p2_end = clock();
 
                 waitpid(p3, &status, 0);
                 printf("Third process finished...\n");
-                p3_end = clock();
+                times->p3_end = clock();
 
                 /********* Output results ************/
                 // command  1 results
                 print_command_results(FILE_NAME1);
                 printf("Result took:%dms\n", 
-                    ((int) (p1_end - p1_start)) / CLOCKS_PER_SEC );
+                    ((int) (times->p1_end - times->p1_start)) / CLOCKS_PER_SEC );
 
                 // command 2 results
                 print_command_results(FILE_NAME2);
                 printf("Result took:%dms\n", 
-                    ((int) (p2_end - p2_start)) / CLOCKS_PER_SEC );
+                    ((int) (times->p2_end - times->p2_start)) / CLOCKS_PER_SEC );
 
                 // command 3 results
                 print_command_results(FILE_NAME3);
                 printf("Result took:%dms\n", 
-                    ((int) (p3_end - p3_start)) / CLOCKS_PER_SEC );
+                    ((int) (times->p3_end - times->p3_start)) / CLOCKS_PER_SEC );
 
                 printf("Children process IDs: %d %d %d.\n", p1, p2, p3);
-                parent_end = clock();
+                times->parent_end = clock();
                 printf("Total elapsed time:%dms\n", 
-                    ((int) (parent_end - parent_start)) / CLOCKS_PER_SEC );
+                    ((int) (times->parent_end - times->parent_start)) / CLOCKS_PER_SEC ); // needed????!!???
             }
         }
     }
-    // printf("Ending pid(%d)\n", getpid());
 }
 
 /*
@@ -209,6 +213,7 @@ void execute_command(char** cmd, char* filename, int file_num) {
     // todo: why is this not outputting to file?
     if (execvp(cmd[0], cmd) == -1) {
         printf("[SHELL %d] STATUS CODE=-1\n", file_num);
+        exit(-1);
     } 
 }
 
