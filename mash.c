@@ -1,3 +1,9 @@
+/*
+ * Assignment 1 MASH
+ * Joshua Atherton  |  Armoni Atherton
+ * TCSS 422 Fall 2018
+ */ 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,14 +21,13 @@
 #define FILE_NAME2 "rfile2.txt"
 #define FILE_NAME3 "rfile3.txt"
 
-#define P1_START 4.5
-
 void parse(char ***data, char *cmd, char *filename); 
 void run_commands(char * file, char ** cmd1, char ** cmd2, char ** cmd3);
 void execute_command(char** cmd, char* filename);
 void print_command_results(char * filename);
 /*
- * Driver for program. 
+ * Driver takes in three commands and a file to perform those commands on.
+ * Program runs the commands in a parallel fashion. 
  */
 int main(int argc, char *argv[]) {
 
@@ -187,5 +192,13 @@ void execute_command(char** cmd, char* filename) {
  */
 void print_command_results(char * filename) {
     // todo: get the file results and output
+
+    FILE * temp_file = fopen(filename, "r");
     printf("-----file results here -----\n");
+    char line[MAXSTR];
+    while ( fgets(line, MAXSTR, temp_file) != NULL) {
+        printf("%s", line);
+    }
+
+    fclose(temp_file);
 }
