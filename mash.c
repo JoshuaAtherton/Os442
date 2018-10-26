@@ -31,6 +31,7 @@ void run_commands(char * file, char ** cmd1, char ** cmd2, char ** cmd3,
                 Times *times);
 void execute_command(char** cmd, char* filename, int file_num);
 void print_command_results(char * filename);
+char** stripped_file_name(char** cmd);
 
 /*
  * Driver takes in three commands and a file to perform those commands on.
@@ -197,21 +198,17 @@ void execute_command(char** cmd, char* filename, int file_num) {
     close(STDOUT_FILENO);
     new_file_handler = open(filename, O_CREAT|O_WRONLY|O_TRUNC, S_IRWXU);
 
-    /*** todo: format the command and output to file with 80 char spacing ****/
+    /*** format the command and output to file with 80 char spacing  *********/
     printf("----- CMD %d: ", file_num); // 12 char long
     
-    /*** remove the file name and extention from the end of char** cmd *******/ 
-    int i;
-    for (i = 0; *(cmd + i) != 0; i++) 
-        if (*(cmd + i) == 0)
-            *(cmd + i) = 0;
-    *(cmd + (i - 1)) = 0;
+    /*** new char** with the file name and extention removed from the end of char** cmd **/ 
+    char** temp = stripped_file_name(cmd);
 
     /**** output the rest of the command arguments to the file  **************/
     int count = 0, cmd_length = 0;
-    while (*(cmd + count) != NULL) {
-        cmd_length += strlen(*(cmd + count));
-        printf("%s ", *(cmd + count) );
+    while (*(temp + count) != NULL) {
+        cmd_length += strlen(*(temp + count));
+        printf("%s ", *(temp + count) );
         count++;
     }
 
@@ -243,11 +240,30 @@ void print_command_results(char * filename) {
     fclose(temp_file);
 }
 
+/** 
+ * Strip the last non-null value from a char** array.
+ */
+char** stripped_file_name(char** cmd) {
+
+    char** temp = (char**) malloc(sizeof(char*) * ARGCNT);
+    int i;
+    for (i = 0; *(cmd + i) != 0; i++) {
+        char* s = malloc(sizeof(char) * sizeof(*(cmd + i)));
+        strcpy(s, *(cmd + i));
+        *(temp + i) = s;
+        // strcpy(*(temp + i), *(cmd + i));
+    }
+    *(temp + (i - 1)) = 0; // replace last value
+    
+    return temp;
+}
+
 
 /**************
  * Todo:
  *  -remove the file from comand input
  *  -get thread timming working : should use wall clock?
+ *  -memory leaks? not freeing malloc
  * 
  * 
  * ************/
