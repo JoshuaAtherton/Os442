@@ -104,8 +104,8 @@ void parse(char ***data, char *cmd, char *filename) {
     }
     // add filename to end and null terminate it
     for (int i = 0; *(filename + i) != 0; i++) 
-            if (*(filename+ i) == '\n')
-                *(filename + i) = 0;
+        if (*(filename + i) == '\n')
+            *(filename + i) = 0;
 
     *(*data + cnt) = filename;
     *(*data + (cnt + 1)) = 0;
@@ -126,6 +126,7 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3,
         // printf("--start p1 forks pid(%d)\n", getpid());
         times->p1_start = clock();
         execute_command(cmd1, FILE_NAME1, 1);
+        exit(0);
         
     } else if (p1 > 0) {
         // parent starts fork 2
@@ -135,6 +136,7 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3,
             // printf("--start p2 forks pid(%d)\n", getpid());
             times->p2_start = clock();
             execute_command(cmd2, FILE_NAME2, 2);
+            exit(0);
         
         } else if (p2 > 0) {
             // parent starts fork 3
@@ -144,6 +146,7 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3,
                 // printf("--start p3 forks pid(%d)\n", getpid());
                 times->p3_start = clock();
                 execute_command(cmd3, FILE_NAME3, 3);
+                exit(0);
 
             } else if (p3 > 0) {
                 // parent made three threads with fork
@@ -196,6 +199,15 @@ void execute_command(char** cmd, char* filename, int file_num) {
 
     /*** todo: format the command and output to file with 80 char spacing ****/
     printf("----- CMD %d: ", file_num); // 12 char long
+    
+    /*** remove the file name and extention from the end of char** cmd *******/ 
+    int i;
+    for (i = 0; *(cmd + i) != 0; i++) 
+        if (*(cmd + i) == 0)
+            *(cmd + i) = 0;
+    *(cmd + (i - 1)) = 0;
+
+    /**** output the rest of the command arguments to the file  **************/
     int count = 0, cmd_length = 0;
     while (*(cmd + count) != NULL) {
         cmd_length += strlen(*(cmd + count));
@@ -209,8 +221,7 @@ void execute_command(char** cmd, char* filename, int file_num) {
     }
     printf("\n");
     
-    // printf("\ncommand len: %d \n", cmd_length); //todo: remove
-    // todo: why is this not outputting to file?
+    // printf("\ncommand len: %d \n", cmd_length); //todo: remove only for testing
     if (execvp(cmd[0], cmd) == -1) {
         printf("[SHELL %d] STATUS CODE=-1\n", file_num);
         exit(-1);
@@ -236,8 +247,7 @@ void print_command_results(char * filename) {
 /**************
  * Todo:
  *  -remove the file from comand input
- *  -get thread timming working
- *  -three crashes with bad input?
+ *  -get thread timming working : should use wall clock?
  * 
  * 
  * ************/
