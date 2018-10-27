@@ -29,12 +29,13 @@ typedef struct Times {
 
 void parse(char ***data, char *cmd, char *filename); 
 void run_commands(char * file, char ** cmd1, char ** cmd2, char ** cmd3,
-                Times** times);
+                Times* times);
 void execute_command(char** cmd, char* filename, int file_num);
 void print_command_results(char * filename);
 char** stripped_file_name(char** cmd);
 
 void test_func(char *t, char* t2);
+void test_struct(Times *t);
  
 /*
  * Driver takes in three commands and a file to perform those commands on.
@@ -68,27 +69,29 @@ int main(int argc, char *argv[]) {
     char ** args3;
     parse(&args3, cmd3, file);
 
-    Times *times = (Times*)mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
+    Times *times = (Times*)mmap(NULL, sizeof(Times), PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
 
     //run the commands on three different threads
-    run_commands(file, args1, args2, args3, &times);
+    run_commands(file, args1, args2, args3, times);
 
-    // testing allocating in memory on a shared heap
+    // testing allocating in memory on a shared heap /////
     
-    Times *test = (Times*)mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
-    test->p1_end = clock();
-    printf("  test %d   \n", test->p1_end);
+    // int size = 4096;
+    // char* anon = (char*)mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
+    // char* anon2 = (char*)mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
+    // test_func(anon, anon2);
+    // printf("main child: %s \n", anon);
+    // printf("main parent: %s \n", anon2);
 
     /*** test mem allocation in function with forks **/
-    char* anon = (char*)mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
-    char* anon2 = (char*)mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
-    strcpy(anon, "josh");
-    printf("&& %s &&\n", anon);
-    
-    test_func(anon, anon2);
-    printf("main child: %s \n", anon);
-    printf("main parent: %s \n", anon2);
+    Times *test = (Times*)mmap(NULL, sizeof(Times), PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
+    // test->p1_end = clock();
+    // printf("  test %lu   \n", test->p1_end);
 
+    test_struct(test);
+    printf("-----------main------------------\n");
+    printf("in parent child time: %ld \n", (test->p1_end - test->p1_start));
+    printf("in parent parent time: %ld \n", (test->parent_end - test->parent_start));
 
     /***** remove all tempory files used to store data ******/
     remove(FILE_NAME1);
@@ -97,7 +100,7 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
-
+//test char pointer
 void test_func(char *t, char* t2) {
     pid_t p1;
     p1 = fork();
@@ -109,6 +112,27 @@ void test_func(char *t, char* t2) {
         printf("parent: %d\n", getpid());
         strcpy(t2, "parent");
         printf("in parent: %s \n", t2);
+    }
+}
+// test struct
+void test_struct(Times *t) {
+    pid_t p1;
+    int status;
+    printf("------------test_struct-----------------\n");
+    t->parent_start = time(NULL);
+    p1 = fork();
+    if (p1 == 0) { // child  
+        t->p1_start = time(NULL);
+        sleep(2);
+        printf("in child: %lu \n", t->p1_start);
+        exit(0);
+    } else if (p1 > 0) {
+        waitpid(p1, &status, 0);
+        t->p1_end = time(NULL);
+        printf("in parent child time: %ld \n", (t->p1_end - t->p1_start));
+        sleep(1);
+         t->parent_end = time(NULL);
+        printf("in parent parent time: %ld \n", (t->parent_end - t->parent_start));
     }
 }
 
@@ -143,16 +167,16 @@ void parse(char ***data, char *cmd, char *filename) {
 /*
  * Run three commands entered in parallel. 
  */
-void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Times** times) {
+void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Times* times) {
        
     int status;
     pid_t p1, p2, p3;
-    (*times)->parent_start = clock();
+    times->parent_start = time(NULL);
     p1 = fork(); // parent starts fork 1
     if (p1 == 0) { 
         // do child 1 stuff
         // printf("--start p1 forks pid(%d)\n", getpid());
-        (*times)->p1_start = clock();
+        times->p1_start = time(NULL);
         execute_command(cmd1, FILE_NAME1, 1);
         exit(0);
         
@@ -162,7 +186,7 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Times** tim
         if (p2 == 0) {
             // do child 2 stuff
             // printf("--start p2 forks pid(%d)\n", getpid());
-            (*times)->p2_start = clock();
+            times->p2_start = time(NULL);
             execute_command(cmd2, FILE_NAME2, 2);
             exit(0);
         
@@ -172,7 +196,7 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Times** tim
             if (p3 == 0) {
                 // do child 3 stuff
                 // printf("--start p3 forks pid(%d)\n", getpid());
-                (*times)->p3_start = clock();
+                times->p3_start = time(NULL);
                 execute_command(cmd3, FILE_NAME3, 3);
                 exit(0);
 
@@ -181,36 +205,36 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Times** tim
                 // wait for children to finish
                 waitpid(p1, &status, 0);
                 printf("First process finished...\n");
-                (*times)->p1_end = clock();
+                times->p1_end = time(NULL);
 
                 waitpid(p2, &status, 0);
                 printf("Second process finished...\n");
-                (*times)->p2_end = clock();
+                times->p2_end = time(NULL);
 
                 waitpid(p3, &status, 0);
                 printf("Third process finished...\n");
-                (*times)->p3_end = clock();
+                times->p3_end = time(NULL);
 
                 /********* Output results ************/
                 // command  1 results
                 print_command_results(FILE_NAME1);
-                printf("Result took:%dms\n", 
-                    ((int) ((*times)->p1_end - (*times)->p1_start)) / CLOCKS_PER_SEC );
+                printf("Result took:%ld\n", 
+                    ((times->p1_end - times->p1_start)));
 
                 // command 2 results
                 print_command_results(FILE_NAME2);
-                printf("Result took:%dms\n", 
-                    ((int) ((*times)->p2_end - (*times)->p2_start)) / CLOCKS_PER_SEC );
+                printf("Result took:%ld\n", 
+                    ((times->p2_end - times->p2_start)));
 
                 // command 3 results
                 print_command_results(FILE_NAME3);
-                printf("Result took:%dms\n", 
-                    ((int) ((*times)->p3_end - (*times)->p3_start)) / CLOCKS_PER_SEC );
+                printf("Result took:%ld\n", 
+                    ((times->p3_end - times->p3_start)));
 
                 printf("Children process IDs: %d %d %d.\n", p1, p2, p3);
-                (*times)->parent_end = clock();
-                printf("Total elapsed time:%dms\n", 
-                    ((int) ((*times)->parent_end - (*times)->parent_start)) / CLOCKS_PER_SEC ); // needed????!!???
+                times->parent_end = time(NULL);
+                printf("Total elapsed time:%ld\n", 
+                    ((times->parent_end - times->parent_start)) );
             }
         }
     }
