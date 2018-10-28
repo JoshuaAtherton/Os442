@@ -35,7 +35,6 @@ void execute_command(char** cmd, char* filename, int file_num, struct timespec *
 void print_command_results(char * filename);
 char** stripped_file_name(char** cmd);
 
-
 void test_struct(Wall_times *t);
  
 /*
@@ -295,6 +294,7 @@ char** stripped_file_name(char** cmd) {
 
     return temp;
 }
+
 
 /**************
  * Todo:
