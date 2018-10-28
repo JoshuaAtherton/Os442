@@ -9,11 +9,13 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <math.h>
 #include <assert.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/mman.h>
 
 #define MAXSTR 255
 #define ARGCNT 6
@@ -21,17 +23,21 @@
 #define FILE_NAME2 "rfile2.txt"
 #define FILE_NAME3 "rfile3.txt"
 
-typedef struct Times {
-    clock_t parent_start, p1_start, p2_start, p3_start;
-    clock_t parent_end, p1_end, p2_end, p3_end;
-} Times;
+typedef struct wall_times {
+    struct timespec parent_start, p1_start, p2_start, p3_start;
+    struct timespec parent_end, p1_end, p2_end, p3_end;
+} Wall_times;
 
 void parse(char ***data, char *cmd, char *filename); 
 void run_commands(char * file, char ** cmd1, char ** cmd2, char ** cmd3,
-                Times *times);
-void execute_command(char** cmd, char* filename, int file_num);
+                Wall_times* times);
+void execute_command(char** cmd, char* filename, int file_num, struct timespec *t);
 void print_command_results(char * filename);
+char** stripped_file_name(char** cmd);
 
+
+void test_struct(Wall_times *t);
+ 
 /*
  * Driver takes in three commands and a file to perform those commands on.
  * Program runs the commands in a parallel fashion. 
@@ -64,16 +70,21 @@ int main(int argc, char *argv[]) {
     char ** args3;
     parse(&args3, cmd3, file);
 
-    struct Times times; 
-    //run the commands on three different threads
-    run_commands(file, args1, args2, args3, &times);
+    Wall_times *times = (Wall_times*)mmap(NULL, sizeof(Wall_times), PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
 
-    /**** example of execvp *****/ //remove at the end!
-    // char * myargs[3];
-    // myargs[0] = strdup("wc");
-    // myargs[1] = strdup("t.t");
-    // myargs[2] = NULL;
-    // execvp(myargs[0], myargs);
+    //run the commands on three different threads
+    run_commands(file, args1, args2, args3, times);
+
+    /*** test mem allocation in function with forks **/
+    // Wall_times *test = (Wall_times*)mmap(NULL, sizeof(Wall_times), PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
+    // test_struct(test);
+    // printf("-----------main------------------\n");
+    // printf("in parent child time: %ld ms\n", 
+    //     (long) round((test->p1_end.tv_nsec - test->p1_start.tv_nsec)/1.0e6) + 
+    //     (test->p1_end.tv_sec - test->p1_start.tv_sec) * 1000);
+    // printf("in parent parent time: %ld ms\n", 
+    //     (long) round((test->parent_end.tv_nsec - test->parent_start.tv_nsec)/1.0e6) + 
+    //     (test->parent_end.tv_sec - test->parent_start.tv_sec) * 1000);
 
     /***** remove all tempory files used to store data ******/
     remove(FILE_NAME1);
@@ -81,6 +92,30 @@ int main(int argc, char *argv[]) {
     remove(FILE_NAME3);
 
     return 0;
+}
+
+// test struct
+void test_struct(Wall_times *t) {
+    pid_t p1;
+    int status;
+    printf("------------test_struct-----------------\n");
+    clock_gettime(CLOCK_REALTIME, &t->parent_start);
+    // clock_gettime(CLOCK_REALTIME, &t->p1_start);
+    p1 = fork();
+    if (p1 == 0) { // child  
+        clock_gettime(CLOCK_REALTIME, &t->p1_start);
+        sleep(3);
+        clock_gettime(CLOCK_REALTIME, &t->p1_end);
+        exit(0);
+    } else if (p1 > 0) {
+        sleep(2);
+        printf("*** in parent waiting on child to finish: \n");
+        // clock_gettime(CLOCK_REALTIME, &t->p1_start);
+        waitpid(p1, &status, 0);
+        // clock_gettime(CLOCK_REALTIME, &t->p1_end); // was here
+        sleep(3);
+        clock_gettime(CLOCK_REALTIME, &t->parent_end);
+    }
 }
 
 /*
@@ -112,20 +147,19 @@ void parse(char ***data, char *cmd, char *filename) {
 }
 
 /*
- * Run three commands entered in parallel. 
+ * Run the commands entered in parallel output the results 
  */
-void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, 
-                Times *times) {
+void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times* times) {
        
     int status;
     pid_t p1, p2, p3;
-    times->parent_start = clock();
+    clock_gettime(CLOCK_REALTIME, &times->parent_start);
     p1 = fork(); // parent starts fork 1
     if (p1 == 0) { 
         // do child 1 stuff
-        // printf("--start p1 forks pid(%d)\n", getpid());
-        times->p1_start = clock();
-        execute_command(cmd1, FILE_NAME1, 1);
+        clock_gettime(CLOCK_REALTIME, &times->p1_start);
+        execute_command(cmd1, FILE_NAME1, 1, &times->p1_end);
+        // clock_gettime(CLOCK_REALTIME, &times->p1_end);
         exit(0);
         
     } else if (p1 > 0) {
@@ -133,9 +167,9 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3,
         p2 = fork();
         if (p2 == 0) {
             // do child 2 stuff
-            // printf("--start p2 forks pid(%d)\n", getpid());
-            times->p2_start = clock();
-            execute_command(cmd2, FILE_NAME2, 2);
+            clock_gettime(CLOCK_REALTIME, &times->p2_start);
+            execute_command(cmd2, FILE_NAME2, 2, &times->p2_end);
+            // clock_gettime(CLOCK_REALTIME, &times->p2_end);
             exit(0);
         
         } else if (p2 > 0) {
@@ -143,9 +177,9 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3,
             p3 = fork();
             if (p3 == 0) {
                 // do child 3 stuff
-                // printf("--start p3 forks pid(%d)\n", getpid());
-                times->p3_start = clock();
-                execute_command(cmd3, FILE_NAME3, 3);
+                clock_gettime(CLOCK_REALTIME, &times->p3_start);
+                execute_command(cmd3, FILE_NAME3, 3, &times->p3_end);
+                // clock_gettime(CLOCK_REALTIME, &times->p3_end);
                 exit(0);
 
             } else if (p3 > 0) {
@@ -153,36 +187,40 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3,
                 // wait for children to finish
                 waitpid(p1, &status, 0);
                 printf("First process finished...\n");
-                times->p1_end = clock();
+                // clock_gettime(CLOCK_REALTIME, &times->p1_end);
 
                 waitpid(p2, &status, 0);
                 printf("Second process finished...\n");
-                times->p2_end = clock();
+                // clock_gettime(CLOCK_REALTIME, &times->p2_end);
 
                 waitpid(p3, &status, 0);
                 printf("Third process finished...\n");
-                times->p3_end = clock();
+                // clock_gettime(CLOCK_REALTIME, &times->p3_end);
 
                 /********* Output results ************/
                 // command  1 results
                 print_command_results(FILE_NAME1);
-                printf("Result took:%dms\n", 
-                    ((int) (times->p1_end - times->p1_start)) / CLOCKS_PER_SEC );
+                printf("Result took:%ldms\n", 
+                    (long) round((times->p1_end.tv_nsec - times->p1_start.tv_nsec)/1.0e6) + 
+                    (times->p1_end.tv_sec - times->p1_start.tv_sec) * 1000);
 
                 // command 2 results
                 print_command_results(FILE_NAME2);
-                printf("Result took:%dms\n", 
-                    ((int) (times->p2_end - times->p2_start)) / CLOCKS_PER_SEC );
+                printf("Result took:%ldms\n", 
+                    (long) round((times->p2_end.tv_nsec - times->p2_start.tv_nsec)/1.0e6) + 
+                    (times->p2_end.tv_sec - times->p2_start.tv_sec) * 1000);;
 
                 // command 3 results
                 print_command_results(FILE_NAME3);
-                printf("Result took:%dms\n", 
-                    ((int) (times->p3_end - times->p3_start)) / CLOCKS_PER_SEC );
+                printf("Result took:%ldms\n", 
+                    (long) round((times->p3_end.tv_nsec - times->p3_start.tv_nsec)/1.0e6) + 
+                    (times->p3_end.tv_sec - times->p3_start.tv_sec) * 1000);;
 
                 printf("Children process IDs: %d %d %d.\n", p1, p2, p3);
-                times->parent_end = clock();
-                printf("Total elapsed time:%dms\n", 
-                    ((int) (times->parent_end - times->parent_start)) / CLOCKS_PER_SEC ); // needed????!!???
+                clock_gettime(CLOCK_REALTIME, &times->parent_end);
+                printf("Total elapsed time:%ldms\n", 
+                    (long) round((times->parent_end.tv_nsec - times->parent_start.tv_nsec)/1.0e6) + 
+                    (times->parent_end.tv_sec - times->parent_start.tv_sec) * 1000);;
             }
         }
     }
@@ -191,27 +229,23 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3,
 /*
  * Execute a single command and write out to a file.
  */
-void execute_command(char** cmd, char* filename, int file_num) {
+void execute_command(char** cmd, char* filename, int file_num, struct timespec* t) {
 
     int new_file_handler;
     close(STDOUT_FILENO);
     new_file_handler = open(filename, O_CREAT|O_WRONLY|O_TRUNC, S_IRWXU);
 
-    /*** todo: format the command and output to file with 80 char spacing ****/
+    /*** format the command and output to file with 80 char spacing  *********/
     printf("----- CMD %d: ", file_num); // 12 char long
     
-    /*** remove the file name and extention from the end of char** cmd *******/ 
-    int i;
-    for (i = 0; *(cmd + i) != 0; i++) 
-        if (*(cmd + i) == 0)
-            *(cmd + i) = 0;
-    *(cmd + (i - 1)) = 0;
+    /*** new char** with the file name and extention removed from the end of char** cmd **/ 
+    char** temp = stripped_file_name(cmd);
 
     /**** output the rest of the command arguments to the file  **************/
     int count = 0, cmd_length = 0;
-    while (*(cmd + count) != NULL) {
-        cmd_length += strlen(*(cmd + count));
-        printf("%s ", *(cmd + count) );
+    while (*(temp + count) != NULL) {
+        cmd_length += strlen(*(temp + count));
+        printf("%s ", *(temp + count) );
         count++;
     }
 
@@ -221,8 +255,10 @@ void execute_command(char** cmd, char* filename, int file_num) {
     }
     printf("\n");
     
-    // printf("\ncommand len: %d \n", cmd_length); //todo: remove only for testing
-    if (execvp(cmd[0], cmd) == -1) {
+    //run the command
+    int code = execvp(cmd[0], cmd);
+    clock_gettime(CLOCK_REALTIME, t);
+    if (code == -1) {
         printf("[SHELL %d] STATUS CODE=-1\n", file_num);
         exit(-1);
     } 
@@ -243,11 +279,27 @@ void print_command_results(char * filename) {
     fclose(temp_file);
 }
 
+/** 
+ * Strip the last non-null value from a char** array.
+ */
+char** stripped_file_name(char** cmd) {
+
+    char** temp = (char**) malloc(sizeof(char*) * ARGCNT);
+    int i;
+    for (i = 0; *(cmd + i) != 0; i++) {
+        char* s = malloc(sizeof(char) * sizeof(*(cmd + i)));
+        strcpy(s, *(cmd + i));
+        *(temp + i) = s;
+    }
+    *(temp + (i - 1)) = 0; // replace last value
+
+    return temp;
+}
 
 /**************
  * Todo:
- *  -remove the file from comand input
  *  -get thread timming working : should use wall clock?
+ *  -memory leaks? not freeing malloc
  * 
  * 
  * ************/
