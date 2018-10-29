@@ -166,15 +166,12 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times*
                 
                 waitpid(p1, &status, 0);
                 printf("First process finished...\n");
-                // clock_gettime(CLOCK_MONOTONIC, &times->p1_end);
 
                 waitpid(p2, &status, 0);
                 printf("Second process finished...\n");
-                // clock_gettime(CLOCK_MONOTONIC, &times->p2_end);
 
                 waitpid(p3, &status, 0);
                 printf("Third process finished...\n");
-                // clock_gettime(CLOCK_MONOTONIC, &times->p3_end);
 
                 // clock the parent run time
                 clock_gettime(CLOCK_MONOTONIC, &times->parent_end);
@@ -240,7 +237,6 @@ void execute_command(char** cmd, char* filename, int file_num) {
     }
     printf("\n");
     
-    // printf("\ncommand len: %d \n", cmd_length); //todo: remove only for testing
     if (execvp(cmd[0], cmd) == -1) {
         printf("[SHELL %d] STATUS CODE=-1\n", file_num);
         exit(-1);
@@ -251,9 +247,9 @@ void execute_command(char** cmd, char* filename, int file_num) {
  * Read the results from the file and output the results to the console. 
  */
 void print_command_results(char * filename) {
-    // todo: get the file results and output
+    
     FILE * temp_file = fopen(filename, "r");
-    // printf("-----file results here -----\n");
+
     char line[MAXSTR];
     while ( fgets(line, MAXSTR, temp_file) != NULL) {
         printf("%s", line);
@@ -274,7 +270,7 @@ char** stripped_file_name(char** cmd) {
         strcpy(s, *(cmd + i));
         *(temp + i) = s;
     }
-    *(temp + (i - 1)) = 0; // replace last value
+    *(temp + (i - 1)) = 0; // replace the last value
 
     return temp;
 }
