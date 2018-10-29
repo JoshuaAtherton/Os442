@@ -120,7 +120,7 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times*
     p1 = fork(); // parent starts fork 1
     if (p1 == 0) { 
         // do child 1 stuff
-        sleep(5);
+        // sleep(5);
         clock_gettime(CLOCK_MONOTONIC, &times->p1_start);
         execute_command(cmd1, FILE_NAME1, 1);
         
@@ -129,7 +129,7 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times*
         p2 = fork();
         if (p2 == 0) {
             // do child 2 stuff
-            sleep(3);
+            // sleep(3);
             clock_gettime(CLOCK_MONOTONIC, &times->p2_start);
             execute_command(cmd2, FILE_NAME2, 2);
         
@@ -138,7 +138,7 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times*
             p3 = fork();
             if (p3 == 0) {
                 // do child 3 stuff
-                sleep(1);
+                // sleep(1);
                 clock_gettime(CLOCK_MONOTONIC, &times->p3_start);
                 execute_command(cmd3, FILE_NAME3, 3);
 
@@ -180,33 +180,14 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times*
 
                 /********* Calculate times ************/
                 long parent_runtime, p1_runtime, p2_runtime, p3_runtime;
-                p1_runtime = round((times->p1_end.tv_nsec - times->p1_start.tv_nsec)/1.0e6) + 
+                p1_runtime = ((times->p1_end.tv_nsec - times->p1_start.tv_nsec)/1.0e6) + 
                              (times->p1_end.tv_sec - times->p1_start.tv_sec) * 1000;
-                p2_runtime = round((times->p2_end.tv_nsec - times->p2_start.tv_nsec)/1.0e6) + 
+                p2_runtime = ((times->p2_end.tv_nsec - times->p2_start.tv_nsec)/1.0e6) + 
                              (times->p2_end.tv_sec - times->p2_start.tv_sec) * 1000;
-                p3_runtime = round((times->p3_end.tv_nsec - times->p3_start.tv_nsec)/1.0e6) + 
+                p3_runtime = ((times->p3_end.tv_nsec - times->p3_start.tv_nsec)/1.0e6) + 
                              (times->p3_end.tv_sec - times->p3_start.tv_sec) * 1000;
-                parent_runtime = round((times->parent_end.tv_nsec - times->parent_start.tv_nsec)/1.0e6) + 
+                parent_runtime = ((times->parent_end.tv_nsec - times->parent_start.tv_nsec)/1.0e6) + 
                                  (times->parent_end.tv_sec - times->parent_start.tv_sec) * 1000;
-
-                // command  1 results
-                print_command_results(FILE_NAME1);
-                printf("Result took s:%ld  ns:%ld\n", (times->p1_end.tv_sec - times->p1_start.tv_sec),
-                                                        (times->p1_end.tv_nsec - times->p1_start.tv_nsec));
-
-
-                // command 2 results
-                print_command_results(FILE_NAME2);
-                printf("Result took s:%ld  ns:%ld\n", (times->p2_end.tv_sec - times->p2_start.tv_sec),
-                                                        (times->p2_end.tv_nsec - times->p2_start.tv_nsec));
-
-                // command 3 results
-                print_command_results(FILE_NAME3);
-                printf("Result took s:%ld  ns:%ld\n", (times->p3_end.tv_sec - times->p3_start.tv_sec),
-                                                        (times->p3_end.tv_nsec - times->p3_start.tv_nsec));
-
-                printf("* Total elapsed time s:%ld  ns:%ld\n", (times->parent_end.tv_sec - times->parent_start.tv_sec),
-                                                        (times->parent_end.tv_nsec - times->parent_start.tv_nsec));
                 
                 /********* Output results ************/
                 // command  1 results
