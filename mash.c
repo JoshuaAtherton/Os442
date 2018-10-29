@@ -163,7 +163,8 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times*
                         c1 = 0;
                     }
                 }
-                
+                clock_gettime(CLOCK_MONOTONIC, &times->parent_end);
+
                 waitpid(p1, &status, 0);
                 printf("First process finished...\n");
 
@@ -174,7 +175,7 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times*
                 printf("Third process finished...\n");
 
                 // clock the parent run time
-                clock_gettime(CLOCK_MONOTONIC, &times->parent_end);
+                // clock_gettime(CLOCK_MONOTONIC, &times->parent_end);
 
                 /********* Calculate times ************/
                 long parent_runtime, p1_runtime, p2_runtime, p3_runtime;
@@ -186,7 +187,7 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times*
                              (times->p3_end.tv_sec - times->p3_start.tv_sec) * 1000;
                 parent_runtime = round((times->parent_end.tv_nsec - times->parent_start.tv_nsec)/1.0e6) + 
                                  (times->parent_end.tv_sec - times->parent_start.tv_sec) * 1000;
-                
+
                 /********* Output results ************/
                 // command  1 results
                 print_command_results(FILE_NAME1);
@@ -199,7 +200,11 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times*
                 // command 3 results
                 print_command_results(FILE_NAME3);
                 printf("Result took:%ldms\n", labs(p3_runtime));
-
+                // print 80 char delimeter
+                for(int i = 0; i < 80; i++) {
+                    printf("-");
+                }
+                printf("\n");
                 printf("Children process IDs: %d %d %d.\n", p1, p2, p3);
                 printf("Total elapsed time:%ldms\n", labs(parent_runtime));
             }
@@ -232,7 +237,7 @@ void execute_command(char** cmd, char* filename, int file_num) {
     }
 
     /*** to print trailing dashes ******/
-    for (int i = 0; i < 68 - cmd_length; i++) {
+    for (int i = 0; i < 67 - cmd_length; i++) {
         printf("-");
     }
     printf("\n");
