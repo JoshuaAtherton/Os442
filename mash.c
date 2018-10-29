@@ -22,6 +22,7 @@
 #define FILE_NAME1 "rfile1.txt"
 #define FILE_NAME2 "rfile2.txt"
 #define FILE_NAME3 "rfile3.txt"
+#define my_max(x, y) ((x) > (y)) ? (x) : (y)
 
 typedef struct wall_times {
     struct timespec parent_start, p1_start, p2_start, p3_start;
@@ -95,37 +96,6 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-// test struct
-void test_struct(Wall_times *t) {
-    pid_t p1;
-    int status;
-    printf("------------test_struct-----------------\n");
-    clock_gettime(CLOCK_REALTIME, &t->parent_start);
-    // clock_gettime(CLOCK_REALTIME, &t->p1_start);
-    p1 = fork();
-    if (p1 == 0) { // child  
-        clock_gettime(CLOCK_REALTIME, &t->p1_start);
-        change_time(&t->p1_end);
-        printf("in child time value: %ld\n", t->p1_end.tv_sec);
-        // sleep(3);
-        // clock_gettime(CLOCK_REALTIME, &t->p1_end);
-        exit(0);
-    } else if (p1 > 0) {
-        sleep(2);
-        printf("*** in parent waiting on child to finish: \n");
-        // clock_gettime(CLOCK_REALTIME, &t->p1_start);
-        waitpid(p1, &status, 0);
-        // clock_gettime(CLOCK_REALTIME, &t->p1_end); // was here
-        sleep(3);
-        clock_gettime(CLOCK_REALTIME, &t->parent_end);
-    }
-}
-void change_time(struct timespec* t) {
-    sleep(3);
-    clock_gettime(CLOCK_REALTIME, t);
-    printf("in change time value: %ld\n", t->tv_sec);
-}
-
 /*
  * Will parse the terminal inputed comands into char arrays.
  */
@@ -161,11 +131,11 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times*
        
     int status;
     pid_t p1, p2, p3;
-    clock_gettime(CLOCK_REALTIME, &times->parent_start);
+    clock_gettime(CLOCK_MONOTONIC, &times->parent_start);
     p1 = fork(); // parent starts fork 1
     if (p1 == 0) { 
         // do child 1 stuff
-        clock_gettime(CLOCK_REALTIME, &times->p1_start);
+        clock_gettime(CLOCK_MONOTONIC, &times->p1_start);
         execute_command(cmd1, FILE_NAME1, 1);
         
     } else if (p1 > 0) {
@@ -173,7 +143,7 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times*
         p2 = fork();
         if (p2 == 0) {
             // do child 2 stuff
-            clock_gettime(CLOCK_REALTIME, &times->p2_start);
+            clock_gettime(CLOCK_MONOTONIC, &times->p2_start);
             execute_command(cmd2, FILE_NAME2, 2);
         
         } else if (p2 > 0) {
@@ -181,37 +151,38 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times*
             p3 = fork();
             if (p3 == 0) {
                 // do child 3 stuff
-                clock_gettime(CLOCK_REALTIME, &times->p3_start);
+                clock_gettime(CLOCK_MONOTONIC, &times->p3_start);
                 execute_command(cmd3, FILE_NAME3, 3);
 
             } else if (p3 > 0) {
                 // parent made three threads with fork
                 // wait for children to finish
+
                 waitpid(p1, &status, 0);
                 printf("First process finished...\n");
-                clock_gettime(CLOCK_REALTIME, &times->p1_end);
+                clock_gettime(CLOCK_MONOTONIC, &times->p1_end);
 
                 waitpid(p2, &status, 0);
                 printf("Second process finished...\n");
-                clock_gettime(CLOCK_REALTIME, &times->p2_end);
+                clock_gettime(CLOCK_MONOTONIC, &times->p2_end);
 
                 waitpid(p3, &status, 0);
                 printf("Third process finished...\n");
-                clock_gettime(CLOCK_REALTIME, &times->p3_end);
+                clock_gettime(CLOCK_MONOTONIC, &times->p3_end);
 
                 // clock the parent run time
-                clock_gettime(CLOCK_REALTIME, &times->parent_end);
+                clock_gettime(CLOCK_MONOTONIC, &times->parent_end);
 
                 /********* Calculate times ************/
                 long parent_runtime, p1_runtime, p2_runtime, p3_runtime;
-                p1_runtime = (round((times->p1_end.tv_nsec - times->p1_start.tv_nsec)/1.0e6) + 
-                             (times->p1_end.tv_sec - times->p1_start.tv_sec)) * 1000;
-                p2_runtime = (round((times->p2_end.tv_nsec - times->p2_start.tv_nsec)/1.0e6) + 
-                             (times->p2_end.tv_sec - times->p2_start.tv_sec)) * 1000;
-                p3_runtime = (round((times->p3_end.tv_nsec - times->p3_start.tv_nsec)/1.0e6) + 
-                             (times->p3_end.tv_sec - times->p3_start.tv_sec)) * 1000;
-                parent_runtime = (round((times->parent_end.tv_nsec - times->parent_start.tv_nsec)/1.0e6) + 
-                                 (times->parent_end.tv_sec - times->parent_start.tv_sec)) * 1000;
+                p1_runtime = round((times->p1_end.tv_nsec - times->p1_start.tv_nsec)/1.0e6) + 
+                             (times->p1_end.tv_sec - times->p1_start.tv_sec) * 1000;
+                p2_runtime = round((times->p2_end.tv_nsec - times->p2_start.tv_nsec)/1.0e6) + 
+                             (times->p2_end.tv_sec - times->p2_start.tv_sec) * 1000;
+                p3_runtime = round((times->p3_end.tv_nsec - times->p3_start.tv_nsec)/1.0e6) + 
+                             (times->p3_end.tv_sec - times->p3_start.tv_sec) * 1000;
+                parent_runtime = round((times->parent_end.tv_nsec - times->parent_start.tv_nsec)/1.0e6) + 
+                                 (times->parent_end.tv_sec - times->parent_start.tv_sec) * 1000;
                 
                 /********* Output results ************/
                 // command  1 results
@@ -220,15 +191,14 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times*
 
                 // command 2 results
                 print_command_results(FILE_NAME2);
-                printf("Result took:%ldms\n", labs(p2_runtime - p1));
+                printf("Result took:%ldms\n", labs(p2_runtime));
 
                 // command 3 results
                 print_command_results(FILE_NAME3);
-                printf("Result took:%ldms\n", labs(p3_runtime - p2));
+                printf("Result took:%ldms\n", p3_runtime);
 
                 printf("Children process IDs: %d %d %d.\n", p1, p2, p3);
-            
-                printf("Total elapsed time:%ldms\n", parent_runtime);
+                printf("Total elapsed time:%ldms\n", my_max(p1_runtime, (my_max(p2_runtime, p3_runtime)) ));
             }
         }
     }
