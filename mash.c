@@ -76,18 +76,6 @@ int main(int argc, char *argv[]) {
     //run the commands on three different threads
     run_commands(file, args1, args2, args3, times);
 
-    /*** test mem allocation in function with forks **/
-    // Wall_times *test = (Wall_times*)mmap(NULL, sizeof(Wall_times), PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
-    // test_struct(test);
-    // printf("-----------main------------------\n");
-    // printf("in main time value: %ld\n", test->p1_end.tv_sec);
-    // printf("in parent child time: %ld ms\n", 
-    //     (long) round((test->p1_end.tv_nsec - test->p1_start.tv_nsec)/1.0e6) + 
-    //     (test->p1_end.tv_sec - test->p1_start.tv_sec) * 1000);
-    // printf("in parent parent time: %ld ms\n", 
-    //     (long) round((test->parent_end.tv_nsec - test->parent_start.tv_nsec)/1.0e6) + 
-    //     (test->parent_end.tv_sec - test->parent_start.tv_sec) * 1000);
-
     /***** remove all tempory files used to store data ******/
     remove(FILE_NAME1);
     remove(FILE_NAME2);
@@ -135,6 +123,7 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times*
     p1 = fork(); // parent starts fork 1
     if (p1 == 0) { 
         // do child 1 stuff
+        sleep(3);
         clock_gettime(CLOCK_MONOTONIC, &times->p1_start);
         execute_command(cmd1, FILE_NAME1, 1);
         
@@ -143,6 +132,7 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times*
         p2 = fork();
         if (p2 == 0) {
             // do child 2 stuff
+            sleep(5);
             clock_gettime(CLOCK_MONOTONIC, &times->p2_start);
             execute_command(cmd2, FILE_NAME2, 2);
         
@@ -157,21 +147,42 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times*
             } else if (p3 > 0) {
                 // parent made three threads with fork
                 // wait for children to finish
+   
+
+                int c3 = 1, c2 = 1, c1 = 0;
+                while (c3 || c2 || c1) {
+                    if ((waitpid(p3, &status, WNOHANG)) == 0) {
+                        clock_gettime(CLOCK_MONOTONIC, &times->p3_end);
+                        printf(" %%  p3 done %% \n");
+                        c3 = 0;
+                    }
+                    if ((waitpid(p2, &status, WNOHANG)) == 0) {
+                        clock_gettime(CLOCK_MONOTONIC, &times->p2_end);
+                        printf(" %%  p2 done %% \n");
+                        c2 = 0;
+                    }
+                    if ((waitpid(p1, &status, WNOHANG)) == 0) {
+                        clock_gettime(CLOCK_MONOTONIC, &times->p1_end);
+                        printf(" %%  p3 done %% \n");
+                        c1 = 0;
+                    }
+                }
+                clock_gettime(CLOCK_MONOTONIC, &times->parent_end);
 
                 waitpid(p1, &status, 0);
                 printf("First process finished...\n");
-                clock_gettime(CLOCK_MONOTONIC, &times->p1_end);
+                // clock_gettime(CLOCK_MONOTONIC, &times->p1_end);
 
                 waitpid(p2, &status, 0);
                 printf("Second process finished...\n");
-                clock_gettime(CLOCK_MONOTONIC, &times->p2_end);
+                // clock_gettime(CLOCK_MONOTONIC, &times->p2_end);
 
                 waitpid(p3, &status, 0);
                 printf("Third process finished...\n");
-                clock_gettime(CLOCK_MONOTONIC, &times->p3_end);
+                // clock_gettime(CLOCK_MONOTONIC, &times->p3_end);
 
                 // clock the parent run time
-                clock_gettime(CLOCK_MONOTONIC, &times->parent_end);
+                // clock_gettime(CLOCK_MONOTONIC, &times->parent_end);
 
                 /********* Calculate times ************/
                 long parent_runtime, p1_runtime, p2_runtime, p3_runtime;
@@ -199,6 +210,7 @@ void run_commands(char* file, char** cmd1, char** cmd2, char** cmd3, Wall_times*
 
                 printf("Children process IDs: %d %d %d.\n", p1, p2, p3);
                 printf("Total elapsed time:%ldms\n", my_max(p1_runtime, (my_max(p2_runtime, p3_runtime)) ));
+                printf("* should be * Total elapsed time:%ldms\n", parent_runtime);
             }
         }
     }
@@ -271,12 +283,3 @@ char** stripped_file_name(char** cmd) {
 
     return temp;
 }
-
-
-/**************
- * Todo:
- *  -get thread timming working : should use wall clock?
- *  -memory leaks? not freeing malloc
- * 
- * 
- * ************/
